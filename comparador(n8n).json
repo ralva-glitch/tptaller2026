@@ -1,0 +1,115 @@
+{
+  "name": "comparador",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d7902e81-7a6d-45eb-9686-243250ad87e1",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d56d0b8a-e188-4455-b9d6-8c95cc90fb5d",
+      "name": "Webhook",
+      "webhookId": "d7902e81-7a6d-45eb-9686-243250ad87e1"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sos un analista de plataformas de streaming para StreamAI. Vas a recibir datos reales (cantidad de títulos, puntaje promedio y géneros principales) de dos plataformas. Tu trabajo es escribir una comparación breve, amena y directa (3-4 oraciones) explicando las fortalezas de cada una según esos datos reales. No inventes títulos ni datos que no te dieron. Terminá con una recomendación corta de para qué tipo de usuario conviene cada una."
+            },
+            {
+              "content": "=Comparame estas dos plataformas con estos datos reales de mi dataset:\n\nPlataforma A: {{ $json.body.plataformaA }} - {{ $json.body.totalA }} títulos, puntaje promedio {{ $json.body.avgA }}, género principal: {{ $json.body.generoA }}\n\nPlataforma B: {{ $json.body.plataformaB }} - {{ $json.body.totalB }} títulos, puntaje promedio {{ $json.body.avgB }}, género principal: {{ $json.body.generoB }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2a48226d-e519-4646-aaab-2b91496d8e46",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "vwhWlF8pCv16yTDy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"comparacion\": {{ JSON.stringify($json.output[0].content[0].text) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        560,
+        0
+      ],
+      "id": "6b0b5d23-8c09-44b5-8ef2-a771fb7fa704",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6eeb8181-7330-483b-b497-0794fb514a64",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4ff4dcbe87f47dd65424300a9fd44c793e0777acbf27c704322512a59fed836a"
+  },
+  "nodeGroups": [],
+  "id": "IwkwZ4RZ0ChuYReu",
+  "tags": []
+}

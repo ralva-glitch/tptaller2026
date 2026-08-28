@@ -1,0 +1,115 @@
+{
+  "name": "chatbot-sorprendeme",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "2763fb50-3ac1-48a1-a8f0-8977bf1a2564",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fb93c108-a157-4e21-847e-a0a6d52ee10d",
+      "name": "Webhook",
+      "webhookId": "2763fb50-3ac1-48a1-a8f0-8977bf1a2564"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sos un asistente de recomendación de películas y series para StreamAI. Cuando el usuario te pida una recomendación, respondé SIEMPRE con un top 5 (nunca preguntes el género, elegí algo razonable según lo que diga el usuario), en este formato:\n\n1. [Título] (Año) - [Plataforma] - Breve descripción en una línea\n2. ...\n\nSé breve y directo. Aclará siempre que la disponibilidad en plataformas puede variar."
+            },
+            {
+              "content": "=Recomendame un top 5 de películas o series del género {{ $json.body.genero }}, con la plataforma de streaming donde se puede ver cada una (elegí entre Netflix, Disney+, Prime Video, HBO Max, Apple TV+, Hulu o Peacock)."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "49b73a63-3012-4728-a6f2-594d467c1023",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "vwhWlF8pCv16yTDy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"respuesta\": {{ JSON.stringify($json.output[0].content[0].text) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        560,
+        0
+      ],
+      "id": "8041d081-c44d-404a-9ae4-1e5764a7a4ff",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "08835dc4-1b94-4090-9270-c7cfbae791ee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4ff4dcbe87f47dd65424300a9fd44c793e0777acbf27c704322512a59fed836a"
+  },
+  "nodeGroups": [],
+  "id": "k9BGHS7pjgbgLO8Q",
+  "tags": []
+}

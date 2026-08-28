@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StreamAI · Recomendador de Contenido</title>
+
+  <!-- Google Fonts: Bebas Neue para display, Inter para body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js para los gráficos del dashboard -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <style>
+    /* ============================================================
+       VARIABLES Y RESET
+    ============================================================ */
+    :root {
+      --bg:          #0D0D0F;
+      --bg2:         #13131A;
+      --card:        #1A1A2E;
+      --card2:       #1E1E35;
+      --border:      #2a2a45;
+      --red:         #E50914;
+      --violet:      #7B2FBE;
+      --blue:        #00B4D8;
+      --gold:        #F5A623;
+      --text:        #F0F0F0;
+      --text-muted:  #8888A8;
+      --radius:      14px;
+      --radius-sm:   8px;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body:    'Inter', sans-serif;
+      --transition:  0.25s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; }
+
+    /* ============================================================
+       SCROLLBAR PERSONALIZADA
+    ============================================================ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--violet); border-radius: 3px; }
+
+    /* ============================================================
+       NAVBAR
+    ============================================================ */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 900;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      background: rgba(13, 13, 15, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, var(--red), var(--violet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex; gap: 2rem; list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color var(--transition);
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active { color: var(--text); }
+
+    .nav-links a.active::after {
+      content: '';
+      display: block;
+      height: 2px;
+      background: var(--red);
+      margin-top: 2px;
+      border-radius: 1px;
+    }
+
+    /* ============================================================
+       SECCIONES GENERALES
+    ============================================================ */
+    section {
+      padding: 100px 2rem 60px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--violet);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      max-width: 600px;
+      margin-bottom: 3rem;
+    }
+
+    /* ============================================================
+       HOME · HERO
+    ============================================================ */
+    #home {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-top: 64px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #home::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(123,47,190,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(229,9,20,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      max-width: 700px;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--blue);
+      background: rgba(0,180,216,0.08);
+      border: 1px solid rgba(0,180,216,0.2);
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-eyebrow span { width:6px; height:6px; background:var(--blue); border-radius:50%; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 8vw, 6rem);
+      line-height: 1;
+      letter-spacing: 2px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title .accent { color: var(--red); }
+    .hero-title .accent2 { color: var(--violet); }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+      margin-bottom: 2.5rem;
+      max-width: 560px;
+    }
+
+    .hero-cta {
+      display: flex; flex-wrap: wrap; gap: 1rem;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 12px 28px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: all var(--transition);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--red), #c0000b);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(229,9,20,0.35); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--violet); color: var(--violet); }
+
+    /* ---- Plataformas ---- */
+    .platforms-section {
+      margin-top: 5rem;
+    }
+
+    .platforms-label {
+      font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 1.2rem;
+    }
+
+    .platforms-grid {
+      display: flex; flex-wrap: wrap; gap: 1rem;
+    }
+
+    .platform-badge {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 10px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9rem; font-weight: 600;
+      cursor: default;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .platform-badge:hover { transform: translateY(-3px); }
+
+    .platform-badge.netflix:hover  { border-color: #E50914; box-shadow: 0 0 20px rgba(229,9,20,0.4); }
+    .platform-badge.disney:hover   { border-color: #0063E5; box-shadow: 0 0 20px rgba(0,99,229,0.4); }
+    .platform-badge.prime:hover    { border-color: #00A8E1; box-shadow: 0 0 20px rgba(0,168,225,0.4); }
+    .platform-badge.hbo:hover      { border-color: #5822A0; box-shadow: 0 0 20px rgba(88,34,160,0.4); }
+    .platform-badge.apple:hover    { border-color: #A2AAAD; box-shadow: 0 0 20px rgba(162,170,173,0.3); }
+
+    .platform-badge.netflix  .platform-dot { background:#E50914; box-shadow:0 0 8px #E50914; }
+    .platform-badge.disney   .platform-dot { background:#0063E5; box-shadow:0 0 8px #0063E5; }
+    .platform-badge.prime    .platform-dot { background:#00A8E1; box-shadow:0 0 8px #00A8E1; }
+    .platform-badge.hbo      .platform-dot { background:#5822A0; box-shadow:0 0 8px #5822A0; }
+    .platform-badge.apple    .platform-dot { background:#A2AAAD; box-shadow:0 0 8px #A2AAAD; }
+
+    .platform-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+
+    .platform-count {
+      font-size: 0.75rem; color: var(--text-muted); font-weight: 400;
+    }
+
+    /* Estadísticas rápidas */
+    .hero-stats {
+      display: flex; flex-wrap: wrap; gap: 2.5rem;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .hero-stat-value {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, var(--text) 60%, var(--violet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    /* Nota dataset */
+    .dataset-note {
+      margin-top: 2.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-left: 2px solid var(--violet);
+      padding-left: 1rem;
+      max-width: 560px;
+    }
+
+    /* ============================================================
+       DASHBOARD
+    ============================================================ */
+    #dashboard { background: transparent; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition);
+    }
+
+    .kpi-card:hover { transform: translateY(-3px); }
+
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .kpi-card:nth-child(1)::after { background: var(--blue); }
+    .kpi-card:nth-child(2)::after { background: var(--gold); }
+    .kpi-card:nth-child(3)::after { background: var(--violet); }
+    .kpi-card:nth-child(4)::after { background: var(--red); }
+
+    .kpi-icon {
+      font-size: 1.8rem; margin-bottom: 0.8rem;
+    }
+
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      letter-spacing: 1px;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .kpi-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    /* Charts */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .chart-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1.2rem;
+    }
+
+    .chart-card canvas { max-height: 240px; }
+
+    /* ============================================================
+       SISTEMA DE RECOMENDACIÓN
+    ============================================================ */
+    #recomendar { background: transparent; }
+
+    .filters-row {
+      display: flex; flex-wrap: wrap; gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .filter-group {
+      display: flex; flex-direction: column; gap: 0.4rem;
+      min-width: 160px;
+    }
+
+    .filter-group label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .filter-group select,
+    .filter-group input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 9px 12px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color var(--transition);
+      cursor: pointer;
+    }
+
+    .filter-group select:focus,
+    .filter-group input:focus { border-color: var(--violet); }
+
+    .btn-filter {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--violet), #5a1d99);
+      color: #fff;
+      padding: 10px 26px;
+    }
+    .btn-filter:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(123,47,190,0.4); }
+
+    /* Caja de búsqueda por similitud */
+    .similarity-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 2rem;
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;
+    }
+
+    .similarity-box .filter-group { flex: 1; min-width: 220px; }
+
+    .similarity-label {
+      font-size: 0.78rem; color: var(--blue); font-weight: 600;
+      letter-spacing: 1px; margin-bottom: 0.3rem;
+      display: block;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .pagination-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 2rem;
+    }
+
+    .page-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s ease;
+    }
+
+    .page-btn:hover:not(:disabled) { border-color: var(--violet); color: var(--violet); }
+    .page-btn.active { background: var(--violet); border-color: var(--violet); color: #fff; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .page-dots {
+      color: var(--text-muted);
+      padding: 0 4px;
+      font-size: 0.85rem;
+    }
+
+    .content-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .content-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--violet);
+      box-shadow: 0 12px 32px rgba(123,47,190,0.2);
+    }
+
+    .content-card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .content-title {
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .content-score {
+      background: var(--bg);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .content-meta {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-platform { background: rgba(123,47,190,0.15); color: var(--violet); border: 1px solid rgba(123,47,190,0.25); }
+    .tag-genre    { background: rgba(0,180,216,0.1);  color: var(--blue);   border: 1px solid rgba(0,180,216,0.2); }
+    .tag-type     { background: rgba(229,9,20,0.1);   color: var(--red);    border: 1px solid rgba(229,9,20,0.2); }
+    .tag-year     { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border); }
+    .tag-sim      { background: rgba(245,166,35,0.1); color: var(--gold); border: 1px solid rgba(245,166,35,0.2); }
+
+    .content-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .content-extra {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .no-results span { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; }
+
+    /* ============================================================
+       SORPRENDEME IA (n8n + OpenAI)
+    ============================================================ */
+    #chat-ia { background: transparent; }
+
+    .surprise-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 640px;
+      margin: 0 auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .surprise-header {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--card2);
+    }
+
+    .surprise-header .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 8px var(--blue);
+      animation: pulse 1.5s infinite;
+    }
+
+    .surprise-header span.title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .surprise-header span.subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .surprise-body {
+      padding: 2rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.4rem;
+      text-align: center;
+    }
+
+    .surprise-body p.lead {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      max-width: 420px;
+    }
+
+    .genre-pills {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .genre-pill {
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .genre-pill.active {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(0,180,216,0.08);
+    }
+
+    #btn-sorprender {
+      background: linear-gradient(135deg, var(--red), var(--violet));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 16px 36px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.5px;
+    }
+
+    #btn-sorprender:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(229,9,20,0.4); }
+    #btn-sorprender:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    #resultado-ia {
+      width: 100%;
+      text-align: left;
+      display: none;
+    }
+
+    #resultado-ia.visible { display: block; }
+
+    .resultado-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--violet);
+      border-radius: var(--radius-sm);
+      padding: 1.2rem 1.4rem;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .resultado-card strong { color: var(--gold); }
+
+    .resultado-loading {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    .resultado-error {
+      background: rgba(229,9,20,0.1);
+      border: 1px solid rgba(229,9,20,0.3);
+      border-left: 3px solid var(--red);
+      color: var(--red);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.2rem;
+      font-size: 0.85rem;
+    }
+
+    /* ============================================================
+       COMPARADOR DE PLATAFORMAS (n8n + OpenAI)
+    ============================================================ */
+    #comparador { background: transparent; }
+
+    .compare-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.6rem;
+    }
+
+    .compare-selectors {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.4rem;
+    }
+
+    .compare-selectors .filter-group { flex: 1; min-width: 180px; }
+
+    .vs-badge {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      padding-top: 1.4rem;
+    }
+
+    #btn-comparar {
+      width: 100%;
+      background: linear-gradient(135deg, var(--violet), var(--blue));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 14px 28px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.3px;
+    }
+
+    #btn-comparar:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,180,216,0.35); }
+    #btn-comparar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .stats-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 1.4rem 0;
+    }
+
+    .stats-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .stats-card .plat-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .stats-card .stat-row {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .stats-card .stat-row strong { color: var(--gold); }
+
+    #resultado-comparacion {
+      display: none;
+    }
+
+    #resultado-comparacion.visible { display: block; }
+
+    /* ============================================================
+       CHAT STREAMAI (asistente IA - texto libre)
+    ============================================================ */
+    #chat-ia { background: transparent; }
+
+    .chat-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 640px;
+      margin: 0 auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--card2);
+    }
+
+    .chat-header .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 8px var(--blue);
+      animation: pulse 1.5s infinite;
+    }
+
+    .chat-header span.title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .chat-header span.subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    #chat-mensajes {
+      height: 360px;
+      overflow-y: auto;
+      padding: 1.2rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .msg-user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--violet), #5a1d99);
+      color: #fff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .msg-bot {
+      align-self: flex-start;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 2px;
+    }
+
+    .msg-bot strong { color: var(--gold); }
+
+    .msg-loading {
+      align-self: flex-start;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
+    .msg-error {
+      align-self: flex-start;
+      background: rgba(229,9,20,0.1);
+      border: 1px solid rgba(229,9,20,0.3);
+      color: var(--red);
+    }
+
+    .chat-suggestions {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      padding: 0 1.4rem 1rem;
+    }
+
+    .chat-suggestion {
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .chat-suggestion:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .chat-input-row {
+      display: flex; gap: 0.6rem;
+      padding: 1rem 1.4rem;
+      border-top: 1px solid var(--border);
+      background: var(--card2);
+    }
+
+    .chat-input-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 10px 14px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .chat-input-row input:focus { border-color: var(--violet); }
+
+    .chat-input-row button {
+      background: linear-gradient(135deg, var(--red), #c0000b);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .chat-input-row button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(229,9,20,0.35); }
+    .chat-input-row button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ============================================================
+       LOADING OVERLAY
+    ============================================================ */
+    #loading-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem;
+      transition: opacity 0.4s ease;
+    }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-overlay p { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 1px; }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      max-width: 100%;
+    }
+
+    footer span { color: var(--red); }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      section { padding: 80px 1.2rem 40px; }
+      .hero-title { font-size: 3.2rem; }
+      .hero-stats { gap: 1.5rem; }
+      .filters-row { flex-direction: column; }
+      .filter-group { min-width: unset; }
+      .similarity-box { flex-direction: column; align-items: stretch; }
+      #chat-mensajes { height: 320px; }
+    }
+
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .msg { max-width: 92%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       LOADING OVERLAY (mientras se procesa el dataset)
+  ============================================================ -->
+  <div id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>CARGANDO DATASET...</p>
+  </div>
+
+  <!-- ============================================================
+       NAVBAR
+  ============================================================ -->
+  <nav class="navbar">
+    <div class="nav-logo">StreamAI</div>
+    <ul class="nav-links">
+      <li><a href="#home" class="active" onclick="setActive(this)">Inicio</a></li>
+      <li><a href="#dashboard" onclick="setActive(this)">Dashboard</a></li>
+      <li><a href="#recomendar" onclick="setActive(this)">Recomendar</a></li>
+      <li><a href="#chat-ia" onclick="setActive(this)">Asistente IA</a></li>
+      <li><a href="#sorprendeme" onclick="setActive(this)">Sorprendeme</a></li>
+      <li><a href="#comparador" onclick="setActive(this)">Comparar</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============================================================
+       SECCIÓN HOME
+  ============================================================ -->
+  <section id="home">
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span></span> Proyecto Universitario · Análisis de Contenido Streaming
+      </div>
+
+      <h1 class="hero-title">
+        Descubrí tu<br>
+        próximo <span class="accent">favorito</span><br>
+        <span class="accent2">ahora</span>
+      </h1>
+
+      <p class="hero-desc">
+        Un sistema de recomendación de películas y series basado en un dataset
+        real de catálogos de streaming (estilo Kaggle: Netflix + Disney+ +
+        Prime Video + HBO Max + Apple TV+), con dashboard analítico,
+        motor de recomendación por filtros y similitud de contenido.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#recomendar" class="btn btn-primary">
+          🎬 Buscar contenido
+        </a>
+        <a href="#dashboard" class="btn btn-outline">
+          📊 Ver análisis
+        </a>
+      </div>
+    </div>
+
+    <!-- Plataformas disponibles -->
+    <div class="platforms-section">
+      <p class="platforms-label">Plataformas incluidas</p>
+      <div class="platforms-grid" id="platforms-grid">
+        <!-- Generado dinámicamente por JS con conteos reales -->
+      </div>
+    </div>
+
+    <!-- Stats rápidas -->
+    <div class="hero-stats">
+      <div>
+        <div class="hero-stat-value" id="stat-total">–</div>
+        <div class="hero-stat-label">Títulos</div>
+      </div>
+      <div>
+        <div class="hero-stat-value" id="stat-avg">–</div>
+        <div class="hero-stat-label">Puntaje promedio</div>
+      </div>
+      <div>
+        <div class="hero-stat-value">5</div>
+        <div class="hero-stat-label">Plataformas</div>
+      </div>
+      <div>
+        <div class="hero-stat-value" id="stat-genres">–</div>
+        <div class="hero-stat-label">Géneros</div>
+      </div>
+    </div>
+
+    <p class="dataset-note">
+      📁 Dataset: muestra de 800 títulos (subconjunto representativo de un
+      dataset combinado de 5.000 registros, con esquema equivalente al
+      dataset público <em>"Netflix Movies and TV Shows"</em> de Kaggle,
+      extendido a 5 plataformas). Ver <code>/data</code> y
+      <code>/notebooks</code> para el dataset completo y el análisis en
+      Google Colab.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       SECCIÓN DASHBOARD
+  ============================================================ -->
+  <section id="dashboard" style="max-width:1200px; margin:0 auto; padding:80px 2rem 60px;">
+    <p class="section-label">Análisis</p>
+    <h2 class="section-title">Dashboard de contenido</h2>
+    <p class="section-desc">Métricas y visualizaciones sobre el dataset de películas y series de streaming.</p>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">🎬</div>
+        <div class="kpi-value" id="kpi-total">–</div>
+        <div class="kpi-label">Títulos totales</div>
+        <div class="kpi-sub" id="kpi-total-sub">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">⭐</div>
+        <div class="kpi-value" id="kpi-avg">–</div>
+        <div class="kpi-label">Puntaje promedio</div>
+        <div class="kpi-sub">Sobre 10 puntos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🎭</div>
+        <div class="kpi-value" id="kpi-genre" style="font-size:1.5rem;">–</div>
+        <div class="kpi-label">Género más frecuente</div>
+        <div class="kpi-sub" id="kpi-genre-sub">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🏆</div>
+        <div class="kpi-value" id="kpi-platform" style="font-size:1.5rem;">–</div>
+        <div class="kpi-label">Mejor plataforma</div>
+        <div class="kpi-sub" id="kpi-platform-sub">Por puntaje promedio</div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">📺 Títulos por plataforma</div>
+        <canvas id="chartPlatform"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎭 Distribución por género</div>
+        <canvas id="chartGenre"></canvas>
+      </div>
+      <div class="chart-card" style="grid-column: 1 / -1;">
+        <div class="chart-title">📅 Evolución de títulos por año de lanzamiento</div>
+        <canvas id="chartYear" style="max-height: 220px;"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECCIÓN RECOMENDACIONES
+  ============================================================ -->
+  <section id="recomendar" style="max-width:1200px; margin:0 auto; padding:80px 2rem 60px;">
+    <p class="section-label">Descubrí</p>
+    <h2 class="section-title">Sistema de recomendación</h2>
+    <p class="section-desc">Filtrá por género, plataforma, tipo y puntaje mínimo, o buscá títulos similares por contenido (motor de similitud TF-IDF).</p>
+
+    <!-- Búsqueda por similitud de contenido -->
+    <div class="similarity-box">
+      <div class="filter-group">
+        <span class="similarity-label">🔎 Buscar títulos similares (motor de embeddings)</span>
+        <input type="text" id="f-similar" placeholder="Ej: Stranger Things, Dark, The Crown...">
+      </div>
+      <button class="btn btn-filter" onclick="buscarSimilares()">Buscar similares</button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-row">
+      <div class="filter-group">
+        <label>Género</label>
+        <select id="f-genre">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Plataforma</label>
+        <select id="f-platform">
+          <option value="">Todas</option>
+          <option>Netflix</option>
+          <option>Disney+</option>
+          <option>Prime Video</option>
+          <option>HBO Max</option>
+          <option>Apple TV+</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Tipo</label>
+        <select id="f-type">
+          <option value="">Todos</option>
+          <option value="Movie">Película</option>
+          <option value="TV Show">Serie</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Puntaje mínimo</label>
+        <input type="number" id="f-score" min="0" max="10" step="0.1" placeholder="0.0">
+      </div>
+      <div class="filter-group">
+        <button class="btn btn-filter" onclick="filtrar()">🔍 Filtrar</button>
+      </div>
+      <div class="filter-group">
+        <button class="btn btn-outline" onclick="resetFiltros()" style="align-self:flex-end; padding:10px 16px;">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- Contador de resultados -->
+    <p id="results-count" style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.2rem;"></p>
+
+    <!-- Grid de resultados -->
+    <div class="results-grid" id="results-grid"></div>
+
+    <!-- Paginación -->
+    <div class="pagination-controls" id="pagination-controls"></div>
+  </section>
+
+  <!-- ============================================================
+       SECCIÓN CHAT IA (texto libre)
+  ============================================================ -->
+  <section id="chat-ia" style="max-width:1200px; margin:0 auto; padding:80px 2rem 60px;">
+    <p class="section-label">Preguntale a la IA</p>
+    <h2 class="section-title">Asistente de recomendación</h2>
+    <p class="section-desc">Un chat conectado a un workflow de n8n + OpenAI. Pedile un top 5 de cualquier género y te va a sugerir títulos junto con la plataforma donde mirarlos.</p>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <span class="dot"></span>
+        <span class="title">StreamAI Assistant</span>
+        <span class="subtitle">n8n + GPT-4o</span>
+      </div>
+
+      <div id="chat-mensajes">
+        <div class="msg msg-bot">
+          ¡Hola! 👋 Decime qué género te gusta y te tiro un top 5 con la plataforma donde mirarlo. Ejemplo: <strong>"recomendame comedias"</strong>.
+        </div>
+      </div>
+
+      <div class="chat-suggestions">
+        <span class="chat-suggestion" onclick="sugerencia('Recomendame un top 5 de comedias')">🎭 Comedias</span>
+        <span class="chat-suggestion" onclick="sugerencia('Recomendame un top 5 de terror')">👻 Terror</span>
+        <span class="chat-suggestion" onclick="sugerencia('Recomendame un top 5 de acción')">💥 Acción</span>
+        <span class="chat-suggestion" onclick="sugerencia('Recomendame series para ver en familia')">👨‍👩‍👧 Familia</span>
+      </div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Ej: ¿qué peli me recomendás de comedia?">
+        <button id="chat-enviar" onclick="enviarMensaje()">Enviar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECCIÓN SORPRENDEME IA
+  ============================================================ -->
+  <section id="sorprendeme" style="max-width:1200px; margin:0 auto; padding:80px 2rem 60px;">
+    <p class="section-label">Automatización</p>
+    <h2 class="section-title">Sorprendeme</h2>
+    <p class="section-desc">Un workflow de n8n conectado a OpenAI: cada clic dispara un webhook que genera un top 5 de un género al azar, junto con la plataforma donde mirarlo.</p>
+
+    <div class="surprise-container">
+      <div class="surprise-header">
+        <span class="dot"></span>
+        <span class="title">StreamAI Assistant</span>
+        <span class="subtitle">n8n + GPT-4o-mini</span>
+      </div>
+
+      <div class="surprise-body">
+        <p class="lead">Cada vez que tocás el botón, elegimos un género al azar y se lo mandamos a un workflow de n8n, que le pide a OpenAI un top 5 con plataforma incluida.</p>
+
+        <div class="genre-pills" id="genre-pills">
+          <span class="genre-pill">Comedia</span>
+          <span class="genre-pill">Terror</span>
+          <span class="genre-pill">Acción</span>
+          <span class="genre-pill">Drama</span>
+          <span class="genre-pill">Ciencia ficción</span>
+          <span class="genre-pill">Familia</span>
+        </div>
+
+        <button id="btn-sorprender" onclick="sorprenderme()">🎲 Sorprendeme</button>
+
+        <div id="resultado-ia">
+          <div id="resultado-contenido"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECCIÓN COMPARADOR DE PLATAFORMAS
+  ============================================================ -->
+  <section id="comparador" style="max-width:1200px; margin:0 auto; padding:80px 2rem 60px;">
+    <p class="section-label">Automatización #2</p>
+    <h2 class="section-title">Comparador de plataformas</h2>
+    <p class="section-desc">Elegí dos plataformas: calculamos sus métricas reales sobre el dataset y un segundo workflow de n8n + OpenAI redacta la comparación.</p>
+
+    <div class="compare-container">
+      <div class="compare-selectors">
+        <div class="filter-group">
+          <label>Plataforma A</label>
+          <select id="cmp-platform-a">
+            <option>Netflix</option>
+            <option>Disney+</option>
+            <option>Prime Video</option>
+            <option>HBO Max</option>
+            <option>Apple TV+</option>
+          </select>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="filter-group">
+          <label>Plataforma B</label>
+          <select id="cmp-platform-b">
+            <option>HBO Max</option>
+            <option>Netflix</option>
+            <option>Disney+</option>
+            <option>Prime Video</option>
+            <option>Apple TV+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stats-preview" id="cmp-stats-preview"></div>
+
+      <button id="btn-comparar" onclick="compararPlataformas()">⚔️ Comparar con IA</button>
+
+      <div id="resultado-comparacion" style="margin-top:1.4rem;">
+        <div id="comparacion-contenido"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer>
+    StreamAI · Proyecto Universitario · Hecho con <span>♥</span>, Python (Pandas / Scikit-learn) y JavaScript
+  </footer>
+
+  <!-- ============================================================
+       DATOS Y LÓGICA (ver dataset_embed.js y app.js)
+  ============================================================ -->
+  <script src="dataset_embed.js"></script>
+  <script src="app.js"></script>
+
+  <!-- ============================================================
+       SORPRENDEME IA · conexión con n8n
+  ============================================================ -->
+  <script>
+    const WEBHOOK_URL = "https://seregrun1123.app.n8n.cloud/webhook/2763fb50-3ac1-48a1-a8f0-8977bf1a2564";
+    const GENEROS = ["comedia", "terror", "acción", "drama", "ciencia ficción", "familia"];
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function marcarGeneroActivo(genero) {
+      const pills = document.querySelectorAll('#genre-pills .genre-pill');
+      pills.forEach(p => {
+        p.classList.toggle('active', p.textContent.trim().toLowerCase() === genero.toLowerCase());
+      });
+    }
+
+    async function sorprenderme() {
+      const boton = document.getElementById('btn-sorprender');
+      const resultadoDiv = document.getElementById('resultado-ia');
+      const contenidoDiv = document.getElementById('resultado-contenido');
+
+      const genero = GENEROS[Math.floor(Math.random() * GENEROS.length)];
+      marcarGeneroActivo(genero);
+
+      boton.disabled = true;
+      boton.textContent = '🎲 Pensando...';
+      resultadoDiv.classList.add('visible');
+      contenidoDiv.innerHTML = `<p class="resultado-loading">Consultando a StreamAI Assistant sobre ${genero}...</p>`;
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ genero: genero })
+        });
+
+        if (!response.ok) throw new Error('Respuesta no OK: ' + response.status);
+
+        const data = await response.json();
+
+        if (!data.respuesta) {
+          throw new Error('Respuesta vacía');
+        }
+
+        const textoFormateado = escapeHtml(data.respuesta)
+          .replace(/\n/g, '<br>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        contenidoDiv.innerHTML = `<div class="resultado-card">${textoFormateado}</div>`;
+      } catch (error) {
+        contenidoDiv.innerHTML = `<div class="resultado-error">No pude conectarme con el asistente. Verificá que el workflow de n8n esté activo.</div>`;
+        console.error(error);
+      }
+
+      boton.disabled = false;
+      boton.textContent = '🎲 Sorprendeme';
+    }
+  </script>
+
+  <!-- ============================================================
+       CHAT IA (texto libre) · conexión con n8n
+       Usa el mismo webhook que "Sorprendeme" (WEBHOOK_URL), pero
+       mandando { mensaje: "..." } en vez de { genero: "..." }
+  ============================================================ -->
+  <script>
+    document.getElementById('chat-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') enviarMensaje();
+    });
+
+    function sugerencia(texto) {
+      document.getElementById('chat-input').value = texto;
+      enviarMensaje();
+    }
+
+    async function enviarMensaje() {
+      const input = document.getElementById('chat-input');
+      const boton = document.getElementById('chat-enviar');
+      const mensaje = input.value.trim();
+      if (!mensaje) return;
+
+      const chatDiv = document.getElementById('chat-mensajes');
+
+      const burbujaUser = document.createElement('div');
+      burbujaUser.className = 'msg msg-user';
+      burbujaUser.textContent = mensaje;
+      chatDiv.appendChild(burbujaUser);
+
+      input.value = '';
+      input.disabled = true;
+      boton.disabled = true;
+
+      const cargando = document.createElement('div');
+      cargando.className = 'msg-loading';
+      cargando.id = 'cargando';
+      cargando.textContent = 'StreamAI está pensando...';
+      chatDiv.appendChild(cargando);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensaje: mensaje })
+        });
+
+        if (!response.ok) throw new Error('Respuesta no OK: ' + response.status);
+
+        const data = await response.json();
+        document.getElementById('cargando').remove();
+
+        const burbujaBot = document.createElement('div');
+        burbujaBot.className = 'msg msg-bot';
+        burbujaBot.innerHTML = escapeHtml(data.respuesta || '')
+          .replace(/\n/g, '<br>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        chatDiv.appendChild(burbujaBot);
+      } catch (error) {
+        const cargandoEl = document.getElementById('cargando');
+        if (cargandoEl) cargandoEl.remove();
+
+        const burbujaError = document.createElement('div');
+        burbujaError.className = 'msg msg-error';
+        burbujaError.textContent = 'No pude conectarme con el asistente. Verificá que el workflow de n8n esté activo.';
+        chatDiv.appendChild(burbujaError);
+        console.error(error);
+      }
+
+      input.disabled = false;
+      boton.disabled = false;
+      input.focus();
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+  </script>
+
+  <!-- ============================================================
+       COMPARADOR DE PLATAFORMAS · conexión con n8n (workflow separado)
+  ============================================================ -->
+  <script>
+    const COMPARE_WEBHOOK_URL = "https://seregrun1123.app.n8n.cloud/webhook/d7902e81-7a6d-45eb-9686-243250ad87e1";
+
+    function statsDePlataforma(nombrePlataforma) {
+      const items = DATASET.filter(d => d.plataforma === nombrePlataforma);
+      const total = items.length;
+      const avg = total ? (items.reduce((a, b) => a + b.puntaje, 0) / total) : 0;
+      const xGenero = items.reduce((acc, item) => {
+        acc[item.genero] = (acc[item.genero] || 0) + 1;
+        return acc;
+      }, {});
+      const generoPrincipal = Object.entries(xGenero).sort((a, b) => b[1] - a[1])[0];
+      return {
+        nombre: nombrePlataforma,
+        total: total,
+        avg: avg.toFixed(2),
+        genero: generoPrincipal ? generoPrincipal[0] : 'N/D'
+      };
+    }
+
+    function renderStatsPreview() {
+      const platA = document.getElementById('cmp-platform-a').value;
+      const platB = document.getElementById('cmp-platform-b').value;
+      const statsA = statsDePlataforma(platA);
+      const statsB = statsDePlataforma(platB);
+
+      document.getElementById('cmp-stats-preview').innerHTML = `
+        <div class="stats-card">
+          <div class="plat-name">${statsA.nombre}</div>
+          <div class="stat-row">Títulos: <strong>${statsA.total}</strong></div>
+          <div class="stat-row">Puntaje promedio: <strong>${statsA.avg}</strong></div>
+          <div class="stat-row">Género principal: <strong>${statsA.genero}</strong></div>
+        </div>
+        <div class="stats-card">
+          <div class="plat-name">${statsB.nombre}</div>
+          <div class="stat-row">Títulos: <strong>${statsB.total}</strong></div>
+          <div class="stat-row">Puntaje promedio: <strong>${statsB.avg}</strong></div>
+          <div class="stat-row">Género principal: <strong>${statsB.genero}</strong></div>
+        </div>
+      `;
+    }
+
+    document.getElementById('cmp-platform-a').addEventListener('change', renderStatsPreview);
+    document.getElementById('cmp-platform-b').addEventListener('change', renderStatsPreview);
+    window.addEventListener('DOMContentLoaded', renderStatsPreview);
+    // Por si el DATASET tarda en estar disponible, intentamos también al cargar este script
+    setTimeout(renderStatsPreview, 300);
+
+    async function compararPlataformas() {
+      const boton = document.getElementById('btn-comparar');
+      const resultadoDiv = document.getElementById('resultado-comparacion');
+      const contenidoDiv = document.getElementById('comparacion-contenido');
+
+      const platA = document.getElementById('cmp-platform-a').value;
+      const platB = document.getElementById('cmp-platform-b').value;
+
+      if (platA === platB) {
+        resultadoDiv.classList.add('visible');
+        contenidoDiv.innerHTML = `<div class="resultado-error">Elegí dos plataformas distintas para comparar.</div>`;
+        return;
+      }
+
+      const statsA = statsDePlataforma(platA);
+      const statsB = statsDePlataforma(platB);
+
+      boton.disabled = true;
+      boton.textContent = '⚔️ Comparando...';
+      resultadoDiv.classList.add('visible');
+      contenidoDiv.innerHTML = `<p class="resultado-loading">Analizando ${statsA.nombre} vs ${statsB.nombre}...</p>`;
+
+      try {
+        const response = await fetch(COMPARE_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plataformaA: statsA.nombre,
+            totalA: statsA.total,
+            avgA: statsA.avg,
+            generoA: statsA.genero,
+            plataformaB: statsB.nombre,
+            totalB: statsB.total,
+            avgB: statsB.avg,
+            generoB: statsB.genero
+          })
+        });
+
+        if (!response.ok) throw new Error('Respuesta no OK: ' + response.status);
+
+        const data = await response.json();
+
+        if (!data.comparacion) {
+          throw new Error('Respuesta vacía');
+        }
+
+        const textoFormateado = escapeHtml(data.comparacion)
+          .replace(/\n/g, '<br>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        contenidoDiv.innerHTML = `<div class="resultado-card">${textoFormateado}</div>`;
+      } catch (error) {
+        contenidoDiv.innerHTML = `<div class="resultado-error">No pude conectarme con el asistente. Verificá que el workflow de n8n esté activo.</div>`;
+        console.error(error);
+      }
+
+      boton.disabled = false;
+      boton.textContent = '⚔️ Comparar con IA';
+    }
+  </script>
+</body>
+</html>
